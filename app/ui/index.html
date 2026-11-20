@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Absolute Optimizer</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="titlebar">
+    <span class="title-brand"><img src="icon.png" alt="">Absolute Optimizer</span>
+    <div class="window-buttons" aria-label="Управление окном">
+      <button class="window-button" data-window="minimize" aria-label="Свернуть"><span class="minimize"></span></button>
+      <button class="window-button" data-window="maximize" aria-label="Развернуть или восстановить"><span class="maximize"></span></button>
+      <button class="window-button window-close" data-window="close" aria-label="Закрыть"><span class="close"></span></button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand"><img src="icon.png" alt=""><div><strong>ABSOLUTE</strong><span>OPTIMIZER</span></div></div>
+      <nav aria-label="Разделы">
+        <button type="button" data-page="overview" class="nav-item" aria-current="page"><span class="icon icon-grid" aria-hidden="true"></span>Обзор</button>
+        <button type="button" data-page="performance" class="nav-item"><span class="icon icon-bolt" aria-hidden="true"></span>Производительность</button>
+        <button type="button" data-page="network" class="nav-item"><span class="icon icon-network" aria-hidden="true"></span>Сеть</button>
+      </nav>
+      <div class="system-badge">
+        <span class="icon icon-desktop" aria-hidden="true"></span>
+        <div><strong id="os-label">Windows 10 / 11</strong><small id="version-label">Версия 1.0.0</small></div>
+      </div>
+    </aside>
+
+    <main id="content">
+      <div id="startup-message" class="notice" role="status" hidden></div>
+      <section class="page" id="overview" aria-labelledby="overview-title">
+        <header class="page-heading">
+          <div>
+            <h1 id="overview-title" tabindex="-1">Обзор</h1>
+            <p>Состояние системы и настройки для игр</p>
+          </div>
+          <span class="status-tag" data-profile-status><i></i><span>Стандартный режим</span></span>
+        </header>
+
+        <article class="hero">
+          <div class="hero-content">
+            <span class="hero-icon icon icon-bolt" aria-hidden="true"></span>
+            <h2>Игровой профиль</h2>
+            <p>Отключите фоновую запись и включите схему высокой производительности, если она доступна.</p>
+            <div class="hero-actions">
+              <button type="button" class="button primary" data-profile-action><span class="icon icon-bolt" aria-hidden="true"></span><span>Включить профиль</span></button>
+              <button type="button" class="button hero-link" data-go="performance">Настройки<span class="icon icon-arrow" aria-hidden="true"></span></button>
+            </div>
+          </div>
+        </article>
+
+        <div class="stats" aria-label="Показатели системы">
+          <article class="stat">
+            <div class="stat-heading"><span class="icon-tile"><span class="icon icon-chip" aria-hidden="true"></span></span><h2>Процессор</h2></div>
+            <div class="stat-number"><span id="cpu-value">—</span><small>%</small></div>
+            <div class="meter" aria-hidden="true"><span id="cpu-meter"></span></div>
+            <p>Текущая загрузка</p>
+          </article>
+          <article class="stat">
+            <div class="stat-heading"><span class="icon-tile"><span class="icon icon-memory" aria-hidden="true"></span></span><h2>Оперативная память</h2></div>
+            <div class="stat-number"><span id="ram-value">—</span><small>%</small></div>
+            <div class="meter" aria-hidden="true"><span id="ram-meter"></span></div>
+            <p id="ram-caption">Использование памяти</p>
+          </article>
+          <article class="stat">
+            <div class="stat-heading"><span class="icon-tile"><span class="icon icon-network" aria-hidden="true"></span></span><h2>Средний пинг</h2></div>
+            <div class="stat-number"><span id="ping-value">—</span><small>мс</small></div>
+            <p id="ping-caption">По последнему замеру</p>
+            <button type="button" class="text-button" data-go="network">К тесту сети<span class="icon icon-arrow" aria-hidden="true"></span></button>
+          </article>
+        </div>
+
+        <article class="card chart-card">
+          <div class="card-heading">
+            <div><h2>Задержка соединения</h2><p id="overview-target">12 измерений до выбранного хоста</p></div>
+            <button type="button" data-go="network" class="button secondary"><span class="icon icon-pulse" aria-hidden="true"></span>Тест сети</button>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="overview-chart" role="img" aria-label="График задержки. Замеров пока нет."></canvas>
+            <span class="chart-empty" id="overview-empty">Замеров пока нет</span>
+          </div>
+        </article>
+      </section>
+
+      <section class="page" id="performance" aria-labelledby="performance-title" hidden>
+        <header class="page-heading">
+          <div><h1 id="performance-title" tabindex="-1">Производительность</h1><p>Системные настройки и приоритет игры</p></div>
+          <span class="status-tag" data-profile-status><i></i><span>Стандартный режим</span></span>
+        </header>
+        <article class="card settings-card">
+          <div class="card-heading">
+            <div class="heading-with-icon"><span class="icon-tile"><span class="icon icon-bolt" aria-hidden="true"></span></span><div><h2>Игровой профиль</h2><p>Изменения можно отменить в любой момент.</p></div></div>
+            <button type="button" class="button primary" data-profile-action><span class="icon icon-bolt" aria-hidden="true"></span><span>Включить профиль</span></button>
+          </div>
+          <div class="setting-row"><div><h3>Схема электропитания</h3><p>Переключение на высокую производительность, если схема доступна.</p></div><span id="plan-state" class="setting-value">По доступности</span></div>
+          <div class="setting-row"><div><h3>Фоновая запись игр</h3><p>Отключение записи Xbox Game Bar для текущего пользователя. Перезапустите игру после изменения.</p></div><span id="capture-state" class="setting-value">В профиле</span></div>
+          <p class="note">Эффект зависит от нагрузки и железа. Схема высокой производительности может повысить расход батареи.</p>
+        </article>
+        <article class="card settings-card">
+          <div class="card-heading">
+            <div class="heading-with-icon"><span class="icon-tile"><span class="icon icon-chip" aria-hidden="true"></span></span><div><h2>Приоритет игры</h2><p>Уровень «Выше среднего» для выбранного запущенного процесса.</p></div></div>
+            <button type="button" id="refresh-games" class="button secondary"><span class="icon icon-refresh" aria-hidden="true"></span>Обновить</button>
+          </div>
+          <div class="application-controls">
+            <label class="field">Запущенная игра<select id="game-list" disabled><option value="">Запустите игру и обновите список</option></select></label>
+            <button type="button" id="priority-action" class="button secondary" disabled>Повысить приоритет</button>
+          </div>
+          <p class="note" id="priority-note">Изменение действует до закрытия процесса. Приоритет можно вернуть раньше.</p>
+        </article>
+        <article class="card settings-card">
+          <div class="card-heading"><div><h2>Параметры Windows</h2><p>Настройки, которые применяются индивидуально для каждой игры.</p></div></div>
+          <div class="setting-row"><div><h3>Игровой режим</h3><p>Управление фоновыми задачами во время игры.</p></div><button type="button" class="button secondary" data-settings="gaming">Открыть<span class="icon icon-external" aria-hidden="true"></span></button></div>
+          <div class="setting-row"><div><h3>Настройки графики</h3><p>Выбор производительного GPU, если их несколько.</p></div><button type="button" class="button secondary" data-settings="graphics">Открыть<span class="icon icon-external" aria-hidden="true"></span></button></div>
+        </article>
+      </section>
+
+      <section class="page" id="network" aria-labelledby="network-title" hidden>
+        <header class="page-heading"><div><h1 id="network-title" tabindex="-1">Сеть</h1><p>Пинг, разброс задержки и потери пакетов</p></div></header>
+        <article class="card settings-card">
+          <div class="card-heading">
+            <div class="heading-with-icon"><span class="icon-tile"><span class="icon icon-network" aria-hidden="true"></span></span><div><h2>Тест пинга</h2><p>Укажите адрес, который отвечает на ICMP.</p></div></div>
+          </div>
+          <form id="ping-form" class="application-controls">
+            <label class="field">Хост или IP-адрес<input id="host" value="1.1.1.1" maxlength="253" autocomplete="off" required spellcheck="false"></label>
+            <button type="submit" id="ping-start" class="button primary"><span class="icon icon-pulse" aria-hidden="true"></span><span>Запустить тест</span></button>
+          </form>
+          <div class="net-stats">
+            <div><span>Средний пинг</span><strong id="network-average">—</strong></div>
+            <div><span>Джиттер</span><strong id="network-jitter">—</strong></div>
+            <div><span>Потери</span><strong id="network-loss">—</strong></div>
+          </div>
+          <div class="chart-wrap chart-tall">
+            <canvas id="network-chart" role="img" aria-label="График задержки. Замеров пока нет."></canvas>
+            <span class="chart-empty" id="network-empty">Запустите тест, чтобы увидеть график</span>
+          </div>
+          <p class="note" id="ping-details">Каждый тест отправляет 12 запросов на один IP-адрес.</p>
+          <div class="baseline" id="baseline-area" hidden>
+            <p id="baseline-text"></p>
+            <button id="baseline-button" type="button" class="button secondary">Сохранить как «до»</button>
+          </div>
+        </article>
+        <article class="card settings-card">
+          <div class="card-heading">
+            <div class="heading-with-icon"><span class="icon-tile"><span class="icon icon-gauge" aria-hidden="true"></span></span><div><h2>Лимит фоновой отдачи</h2><p>Ограничьте отправку данных приложением, которое загружает канал.</p></div></div>
+            <span id="qos-status" class="status-tag"><i></i><span>Выключен</span></span>
+          </div>
+          <div class="application-controls qos-controls">
+            <div class="field">Приложение<button type="button" id="choose-background" class="button secondary choose-button"><span class="icon icon-folder" aria-hidden="true"></span><span>Выбрать .exe</span></button></div>
+            <label class="field rate">Мбит/с<input type="number" id="qos-rate" value="5" min="1" max="100" step="1"></label>
+            <button type="button" id="qos-action" class="button secondary" disabled>Применить лимит</button>
+          </div>
+          <p class="note">QoS требует прав администратора и сбрасывается после перезагрузки Windows. Сравнивайте пинг при одинаковой нагрузке.</p>
+        </article>
+      </section>
+    </main>
+  </div>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>
