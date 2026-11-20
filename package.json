@@ -8,7 +8,8 @@
   "scripts": {
     "start": "electron .",
     "test": "node --test",
-    "pack:win": "node scripts/pack-win.cjs"
+    "pack:win": "node scripts/pack-win.cjs",
+    "pack:installer": "node scripts/pack-installer.cjs"
   },
   "devDependencies": {
     "@electron-internal/extract-zip": "1.0.8",

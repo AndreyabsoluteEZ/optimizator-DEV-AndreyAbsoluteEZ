@@ -1,10 +1,12 @@
 # Absolute Optimizer
 
-Переносимый игровой оптимизатор для Windows 10 22H2 и Windows 11 x64. Интерфейс на русском языке. Для запуска готовой сборки Node.js не требуется.
+Игровой оптимизатор для Windows 10 22H2 и Windows 11 x64. Интерфейс на русском языке.
 
 ## Запуск
 
-Распакуйте **AbsoluteOptimizer-win-x64.zip** целиком и запустите **AbsoluteOptimizer.exe** из распакованной папки. Остальные файлы в папке нужны для запуска. Сборка без цифровой подписи.
+Откройте скачанный EXE двойным щелчком и пройдите установку. В последнем окне оставьте включённой галочку **Запустить Absolute Optimizer** и нажмите **Готово**. Для следующих запусков используйте ярлык на рабочем столе. [Скачать установщик EXE](https://github.com/AndreyabsoluteEZ/optimizator-DEV-AndreyAbsoluteEZ/releases/download/v1.0.0/AbsoluteOptimizer-Setup-x64.exe)
+
+Доступна переносимая сборка. Распакуйте ZIP целиком и запустите **AbsoluteOptimizer.exe** из распакованной папки. Установщик и переносимая сборка поставляются без цифровой подписи. [Скачать переносимый ZIP](https://github.com/AndreyabsoluteEZ/optimizator-DEV-AndreyAbsoluteEZ/releases/download/v1.0.0/AbsoluteOptimizer-win-x64.zip)
 
 ## Производительность
 
@@ -32,5 +34,7 @@ npm start
 ```
 
 Команда `npm run pack:win` собирает папку `dist/AbsoluteOptimizer-win-x64` с исполняемым файлом, значком и средой Electron. Сборщик скачивает официальный архив Electron и сверяет SHA-256. Также можно передать путь к ранее скачанному архиву командой `npm run pack:win -- C:\путь\к\electron.zip`. Чтобы отправить сборку, упакуйте в ZIP всю папку.
+
+Чтобы собрать установщик, установите NSIS и выполните `npm run pack:installer` после `npm run pack:win`. Готовый EXE появится в `dist`. Если `makensis` отсутствует в PATH, укажите полный путь к нему в переменной `MAKENSIS`.
 
 Параметры для восстановления хранятся в `%APPDATA%\Absolute Optimizer\restore.json`. Все интерфейсные ресурсы включены в приложение. Шрифт Golos Text поставляется по лицензии SIL Open Font License в папке `app/ui/fonts`.
