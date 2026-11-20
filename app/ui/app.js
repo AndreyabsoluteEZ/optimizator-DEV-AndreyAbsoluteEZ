@@ -35,7 +35,7 @@ function status(element, mode, text) {
 }
 
 function renderState() {
-  const { platform, profile, planChanged, priority, qos, stateError } = current;
+  const { platform, profile, profileChanges, priority, qos, stateError } = current;
   const cannotChange = !platform || pending || Boolean(stateError);
   const profileText = {
     off: 'Стандартный режим', active: 'Игровой профиль активен', pending: 'Требуется восстановление'
@@ -49,10 +49,17 @@ function renderState() {
     button.disabled = cannotChange;
     button.lastElementChild.textContent = profileAction[profile];
   });
-  byId('plan-state').textContent = profile === 'active'
-    ? (planChanged ? 'Переключена' : 'Исходная схема')
-    : 'По доступности';
-  byId('capture-state').textContent = profile === 'active' ? 'Отключена' : 'В профиле';
+  const powerChanges = {
+    'ac-mode': 'Макс. производительность от сети',
+    scheme: 'Высокая производительность',
+    already: 'Уже производительный',
+    unavailable: 'Вариант недоступен',
+    original: 'Исходный режим'
+  };
+  byId('plan-state').textContent = profile === 'active' ? powerChanges[profileChanges.power] : 'По доступности';
+  byId('capture-state').textContent = profile === 'active'
+    ? (profileChanges.capture ? 'Отключена профилем' : 'Уже была выключена')
+    : 'В профиле';
 
   const gameList = byId('game-list');
   byId('refresh-games').disabled = !platform || pending || refreshing || Boolean(priority);
@@ -103,7 +110,7 @@ async function change(action, message) {
   renderState();
   try {
     current = await action();
-    toast(message);
+    toast(current.profileNotice || message);
   } catch (error) {
     toast(error.message, true);
     try { current = await api.state(); } catch {}

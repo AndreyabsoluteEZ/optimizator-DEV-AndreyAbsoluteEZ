@@ -7,7 +7,7 @@ const { pathToFileURL } = require('node:url');
 const path = require('node:path');
 const os = require('node:os');
 const windows = require('./windows.cjs');
-const { validateExe, validateState } = require('./domain.cjs');
+const { profileChanges, validateExe, validateState } = require('./domain.cjs');
 
 const entry = path.join(__dirname, 'ui', 'index.html');
 const entryUrl = pathToFileURL(entry).href;
@@ -61,6 +61,8 @@ async function loadState() {
   const expired = {};
   if (state.qos && qos === 'absent') expired.qos = null;
   if (state.priority && !priority) expired.priority = null;
+  if (state.profile?.complete && !state.profile.plan && !state.profile.acMode &&
+      !profileChanges(state.profile).capture) expired.profile = null;
   if (Object.keys(expired).length) await saveState(expired).catch(console.error);
 }
 
@@ -81,7 +83,7 @@ function currentState() {
   const { profile, priority, qos } = state || {};
   return {
     profile: profile ? (profile.complete ? 'active' : 'pending') : 'off',
-    planChanged: Boolean(profile?.plan),
+    profileChanges: profile ? profileChanges(profile) : null,
     priority: priority ? { file: priority.file, complete: priority.complete } : null,
     qos: qos ? { file: qos.file, rate: qos.rate, complete: qos.complete } : null,
     platform: isWindows,
@@ -110,6 +112,15 @@ async function mutate(action) {
 async function setProfile(enable) {
   if (enable === true && !state.profile) {
     const snapshot = await windows.getProfile();
+    const changes = profileChanges(snapshot);
+    if (!snapshot.plan && !snapshot.acMode && !changes.capture) {
+      return {
+        ...currentState(),
+        profileNotice: snapshot.powerAlready
+          ? 'Производительный режим уже включён, фоновая запись уже выключена.'
+          : 'Windows не предлагает совместимый режим питания. Фоновая запись уже выключена.'
+      };
+    }
     await saveState({ profile: snapshot });
     try {
       await windows.applyProfile(snapshot);

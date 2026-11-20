@@ -4,13 +4,40 @@ const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
 const path = require('node:path');
 const { lookup } = require('node:dns/promises');
-const { guid, normalizeHost, summarize, validateExe } = require('./domain.cjs');
+const { release } = require('node:os');
+const { balanced, guid, normalizeHost, selectProfilePower, summarize, validateExe } = require('./domain.cjs');
 
 const run = promisify(execFile);
 const system = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32');
 const powershell = path.join(system, 'WindowsPowerShell', 'v1.0', 'powershell.exe');
 const modules = path.join(path.dirname(powershell), 'Modules');
-const highPerformance = '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c';
+const nativePowerMode = `
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+
+namespace AbsoluteOptimizer
+{
+    public static class PowerMode
+    {
+        [DllImport("powrprof.dll", ExactSpelling = true)]
+        [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+        public static extern uint PowerGetUserConfiguredACPowerMode(out Guid mode);
+
+        [DllImport("powrprof.dll", ExactSpelling = true)]
+        [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+        public static extern uint PowerSetUserConfiguredACPowerMode(ref Guid mode);
+    }
+}
+'@
+
+function Read-PowerMode {
+  $mode = [guid]::Empty
+  $status = [AbsoluteOptimizer.PowerMode]::PowerGetUserConfiguredACPowerMode([ref]$mode)
+  if ($status -ne 0) { throw "Cannot read AC power mode (Win32 $status)." }
+  return $mode
+}
+`;
 const captureRegistry = `
 $keys = @(
   @{ Path = 'HKCU:\\System\\GameConfigStore'; Name = 'GameDVR_Enabled' },
@@ -69,6 +96,24 @@ async function activePlan() {
   return id;
 }
 
+async function readAcPowerMode() {
+  const mode = await shell(`${nativePowerMode}\n(Read-PowerMode).ToString()`);
+  if (!guid.test(mode)) throw new Error('Windows не вернула режим питания от сети.');
+  return mode;
+}
+
+async function changeAcPowerMode(expected, target) {
+  const result = await shell(`${payload({ expected, target })}${nativePowerMode}
+    if ((Read-PowerMode) -ne [guid]$data.expected) { return }
+    $target = [guid]$data.target
+    $status = [AbsoluteOptimizer.PowerMode]::PowerSetUserConfiguredACPowerMode([ref]$target)
+    if ($status -ne 0) { throw "Cannot set AC power mode (Win32 $status)." }
+    if ((Read-PowerMode) -ne $target) { throw 'Windows did not confirm the requested AC power mode.' }
+    'changed'
+  `);
+  return result === 'changed';
+}
+
 async function getProfile() {
   const [before, plans, capture] = await Promise.all([
     activePlan(),
@@ -78,8 +123,10 @@ async function getProfile() {
       ConvertTo-Json -InputObject $items -Compress
     `)
   ]);
-  return { plan: plans.toLowerCase().includes(highPerformance) && before !== highPerformance
-    ? { before, target: highPerformance } : null, capture, complete: false };
+  const acMode = before === balanced && Number(release().split('.')[2]) >= 22000
+    ? await readAcPowerMode().catch(() => null)
+    : null;
+  return { ...selectProfilePower(before, plans, acMode), capture, complete: false };
 }
 
 async function applyProfile(snapshot) {
@@ -90,16 +137,30 @@ async function applyProfile(snapshot) {
       throw error;
     }
     await runPower('/setactive', snapshot.plan.target);
+    if (await activePlan() !== snapshot.plan.target) {
+      throw new Error('Windows не подтвердила смену схемы питания.');
+    }
   }
-  await shell(`${payload(snapshot.capture)}${captureRegistry}
-    for ($i = 0; $i -lt $keys.Count; $i++) {
-      if ((Read-Capture $keys[$i]) -ne $data[$i].value) { throw 'Game capture settings changed.' }
-    }
-    foreach ($key in $keys) {
-      if (-not (Test-Path -LiteralPath $key.Path)) { New-Item -Path $key.Path -Force | Out-Null }
-      New-ItemProperty -LiteralPath $key.Path -Name $key.Name -PropertyType DWord -Value 0 -Force | Out-Null
-    }
-  `);
+  if (snapshot.acMode && (await activePlan() !== balanced ||
+      !await changeAcPowerMode(snapshot.acMode.before, snapshot.acMode.target))) {
+    const error = new Error('Настройки питания изменились. Повторите включение профиля.');
+    error.unchanged = true;
+    throw error;
+  }
+  if (snapshot.capture.some(item => item.value !== 0)) {
+    await shell(`${payload(snapshot.capture)}${captureRegistry}
+      for ($i = 0; $i -lt $keys.Count; $i++) {
+        if ((Read-Capture $keys[$i]) -ne $data[$i].value) { throw 'Game capture settings changed.' }
+      }
+      for ($i = 0; $i -lt $keys.Count; $i++) {
+        if ($null -ne $data[$i].value -and $data[$i].value -eq 0) { continue }
+        $key = $keys[$i]
+        if (-not (Test-Path -LiteralPath $key.Path)) { New-Item -Path $key.Path -Force | Out-Null }
+        New-ItemProperty -LiteralPath $key.Path -Name $key.Name -PropertyType DWord -Value 0 -Force | Out-Null
+        if ((Read-Capture $key) -ne 0) { throw 'Windows did not confirm the updated game capture setting.' }
+      }
+    `);
+  }
 }
 
 async function restoreProfile(snapshot) {
@@ -107,10 +168,17 @@ async function restoreProfile(snapshot) {
     (async () => {
       if (snapshot.plan && await activePlan() === snapshot.plan.target) {
         await runPower('/setactive', snapshot.plan.before);
+        if (await activePlan() !== snapshot.plan.before) {
+          throw new Error('Windows не подтвердила восстановление схемы питания.');
+        }
+      }
+      if (snapshot.acMode) {
+        await changeAcPowerMode(snapshot.acMode.target, snapshot.acMode.before);
       }
     })(),
-    shell(`${payload(snapshot.capture)}${captureRegistry}
+    snapshot.capture.some(item => item.value !== 0) && shell(`${payload(snapshot.capture)}${captureRegistry}
       for ($i = 0; $i -lt $keys.Count; $i++) {
+        if ($null -ne $data[$i].value -and $data[$i].value -eq 0) { continue }
         $key = $keys[$i]
         $current = Read-Capture $key
         if ($null -eq $current -or $current -ne 0) { continue }

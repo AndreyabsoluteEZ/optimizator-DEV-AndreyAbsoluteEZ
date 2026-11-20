@@ -7,6 +7,42 @@ const guid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const qosName = /^AbsoluteOptimizer-[0-9a-f]{32}$/;
 const priorities = ['Idle', 'BelowNormal', 'Normal', 'AboveNormal', 'High', 'RealTime'];
 const captureKeys = ['GameDVR_Enabled', 'AppCaptureEnabled'];
+const balanced = '381b4222-f694-41f0-9685-ff5bb260df2e';
+const highPerformance = '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c';
+const bestPerformance = 'ded574b5-45a0-4f42-8737-46345c09c238';
+const acModes = [
+  '00000000-0000-0000-0000-000000000000',
+  '961cc777-2547-4f9d-8174-7d86181b8a7a',
+  bestPerformance
+];
+
+function selectProfilePower(before, plans, acMode) {
+  if (before === highPerformance) return { plan: null, acMode: null, powerAlready: true };
+  if (before === balanced && acModes.includes(acMode)) {
+    return {
+      plan: null,
+      acMode: acMode === bestPerformance ? null : { before: acMode, target: bestPerformance },
+      powerAlready: acMode === bestPerformance
+    };
+  }
+  return {
+    plan: plans.toLowerCase().includes(highPerformance) ? { before, target: highPerformance } : null,
+    acMode: null,
+    powerAlready: false
+  };
+}
+
+function profileChanges(profile) {
+  let power = 'original';
+  if (profile.acMode) power = 'ac-mode';
+  else if (profile.plan) power = 'scheme';
+  else if (profile.powerAlready === true) power = 'already';
+  else if (profile.powerAlready === false) power = 'unavailable';
+  return {
+    power,
+    capture: profile.capture.some(item => item.value !== 0)
+  };
+}
 
 function normalizeHost(input) {
   const host = typeof input === 'string' ? input.trim().toLowerCase() : '';
@@ -46,7 +82,7 @@ function validateExe(file) {
 function validateState(state) {
   if (!state || state.version !== 1) throw new Error('Файл восстановления имеет неизвестный формат.');
   if (state.profile) {
-    const { plan, capture, complete } = state.profile;
+    const { plan, acMode, powerAlready, capture, complete } = state.profile;
     if (
       typeof complete !== 'boolean' || !Array.isArray(capture) ||
       capture.length !== captureKeys.length ||
@@ -55,7 +91,10 @@ function validateState(state) {
         return item?.name === key && (item.value === null ||
           (Number.isInteger(item.value) && item.value >= -2147483648 && item.value <= 2147483647));
       }) ||
-      (plan !== null && (!guid.test(plan?.before) || !guid.test(plan?.target)))
+      (plan !== null && (!guid.test(plan?.before) || !guid.test(plan?.target))) ||
+      (acMode != null && (plan !== null || !acModes.includes(acMode.before) ||
+        acMode.before === bestPerformance || acMode.target !== bestPerformance)) ||
+      (powerAlready !== undefined && (typeof powerAlready !== 'boolean' || (powerAlready && (plan || acMode))))
     ) throw new Error('Файл восстановления игрового профиля повреждён.');
   }
   if (state.priority) {
@@ -76,4 +115,4 @@ function validateState(state) {
   return state;
 }
 
-module.exports = { guid, normalizeHost, summarize, validateExe, validateState };
+module.exports = { balanced, guid, normalizeHost, profileChanges, selectProfilePower, summarize, validateExe, validateState };

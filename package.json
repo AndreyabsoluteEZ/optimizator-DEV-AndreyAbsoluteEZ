@@ -1,7 +1,7 @@
 {
   "name": "absolute-optimizer",
   "productName": "Absolute Optimizer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Игровой оптимизатор для Windows 10 и 11",
   "main": "app/main.cjs",
   "private": true,
